@@ -1,6 +1,9 @@
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
+-- girl tower
+-- by natalie fearnley
+
 function _init()
   col=12
   menu=0
