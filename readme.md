@@ -1,5 +1,5 @@
 # Girl Tower
-# by Natalie Fearnley
+by Natalie Fearnley
 
 ## Development Environment
 
