@@ -92,7 +92,7 @@ enemy.__index = enemy
 function enemy:new(args)
  args = args or {}
  o = setmetatable({}, self)
- self.speed=nildef(args,0.23)
+ o.speed=nildef(args.speed,0.23)
  o.step = 1
  o.x = path[o.step].x
  o.y = path[o.step].y
