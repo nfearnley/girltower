@@ -69,22 +69,14 @@ function tower:draw()
 end
 -->8
 -- enemy
-path = {
- {x=5*8,y=15*8},
- {x=5*8,y=14*8},
- {x=9*8,y=14*8},
- {x=9*8,y=11*8},
- {x=3*8,y=11*8},
- {x=3*8,y=14*8},
- {x=1*8,y=14*8},
- {x=1*8,y=4*8},
- {x=3*8,y=4*8},
- {x=3*8,y=8*8},
- {x=8*8,y=8*8},
- {x=8*8,y=4*8},
- {x=5*8,y=4*8},
- {x=5*8,y=0*8}
-}
+function getxy(step)
+ coarse=flr(step/8)+1
+ fine=step%8
+ x,y,dx,dy=unpack(path[coarse])
+ x+=dx*fine
+ y+=dy*fine
+ return x,y
+end
 
 enemy = {}
 enemy.__index = enemy
@@ -92,10 +84,9 @@ enemy.__index = enemy
 function enemy:new(args)
  args = args or {}
  o = setmetatable({}, self)
- o.speed=nildef(args.speed,0.23)
- o.step = 1
- o.x = path[o.step].x
- o.y = path[o.step].y
+ o.speed=nildef(args.speed,0.3)
+ o.step = 0
+ o.x,o.y = getxy(o.step)
  o.hp = nildef(args.hp,200+flr(rnd(400)))
  o.maxhp = o.hp
  return o
@@ -109,26 +100,24 @@ function enemy:update()
   return
  end
  -- we've reached the castle
- if self.step == #path then
+ done = self:move(self.speed)
+ if done then
   del(enemies,self)
   game.hp-=1
   return
  end
- goal=path[self.step+1]
- if (self.x < goal.x) self.x=min(self.x+self.speed,goal.x)
- if (self.x > goal.x) self.x=max(goal.x,self.x-self.speed)
- if (self.y < goal.y) self.y=min(self.y+self.speed,goal.y)
- if (self.y > goal.y) self.y=max(goal.y,self.y-self.speed)
- if self.x == goal.x and self.y == goal.y then
-  self.step+=1
- end
+end
+
+function enemy:move(val)
+ maxstep = (#path-1)*8
+ self.step=min(self.step+val, maxstep)
+ self.x,self.y=getxy(self.step)
+ return self.step == maxstep
 end
 
 function enemy:draw()
- x = self.x
- y = self.y
- drawhp(x,y,8,self.hp,self.maxhp)
- spr(6,x,y)
+ drawhp(self.x-3,self.y-3,8,self.hp,self.maxhp)
+ spr(6,self.x-3,self.y-3)
 end
 
 function enemy:hit(dmg)
@@ -143,6 +132,61 @@ function drawhp(x,y,w,val,maxval)
   pset(x+i,y,col)
  end
 end
+
+path = {
+ {43, 131, 0,-1},
+ {43, 123, 0,-1},
+ {43, 115, 1, 0},
+ {51, 115, 1, 0},
+ {59, 115, 1, 0},
+ {67, 115, 1, 0},
+ {75, 115, 0,-1},
+ {75, 107, 0,-1},
+ {75,  99, 0,-1},
+ {75,  91,-1, 0},
+ {67,  91,-1, 0},
+ {59,  91,-1, 0},
+ {51,  91,-1, 0},
+ {43,  91,-1, 0},
+ {35,  91,-1, 0},
+ {27,  91, 0, 1},
+ {27,  99, 0, 1},
+ {27, 107, 0, 1},
+ {27, 115,-1, 0},
+ {19, 115,-1, 0},
+ {11, 115, 0,-1},
+ {11, 107, 0,-1},
+ {11,  99, 0,-1},
+ {11,  91, 0,-1},
+ {11,  83, 0,-1},
+ {11,  75, 0,-1},
+ {11,  67, 0,-1},
+ {11,  59, 0,-1},
+ {11,  51, 0,-1},
+ {11,  43, 0,-1},
+ {11,  35, 1, 0},
+ {19,  35, 1, 0},
+ {27,  35, 0, 1},
+ {27,  43, 0, 1},
+ {27,  51, 0, 1},
+ {27,  59, 1, 1},
+ {35,  67, 1, 0},
+ {43,  67, 1, 0},
+ {51,  67, 1, 0},
+ {59,  67, 1, 0},
+ {67,  67, 0,-1},
+ {67,  59, 0,-1},
+ {67,  51, 0,-1},
+ {67,  43, 0,-1},
+ {67,  35,-1, 0},
+ {59,  35,-1, 0},
+ {51,  35,-1, 0},
+ {43,  35, 0,-1},
+ {43,  27, 0,-1},
+ {43,  19, 0,-1},
+ {43,  11, 0,-1},
+ { 5,   0, 0, 0}
+}
 -->8
 -- utils
 
@@ -183,7 +227,7 @@ end
 __gfx__
 0000000000000000000000000000000000855c00080c009000000000880000888880000808880000008880000008880000008880800008880000000000000000
 00000000000555555555555555555000058ddc5080c0c90000000000800000080000000800000008000000000000000080000000800000000000000000000000
-007007000005dddddddddddddddd5000055dd55080ccc090000f0000000000000000000800000008000000088000000080000000800000000000000000000000
+007007000005dddddddddddddddd5000055dd55080ccc090000a0000000000000000000800000008000000088000000080000000800000000000000000000000
 0007700000055555555555555555500005d55d5008c0c900000d4400000000000000000000000008800000088000000880000000000000000000000000000000
 000770000005dddddddddddddddd500005dddd5099980cc0004d4000000000000000000080000000800000088000000800000008000000000000000000000000
 007007000005dddddddddddddddd500005dddd5009080cc000404000000000008000000080000000800000000000000800000008000000080000000000000000
