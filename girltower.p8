@@ -5,8 +5,9 @@ __lua__
 -- by natalie fearnley
 
 function _init()
-  towers={}
+  towers={tower:new({x=35,y=35})}
   enemies={}
+  effects={}
   music(0)
 end
 
@@ -25,8 +26,14 @@ function _update()
   	--add(towers, tower:new(t))
   	add(enemies, enemy:new())
   end
+  for tow in all(towers) do
+   tow:update()
+  end
   for enem in all(enemies) do
    enem:update()
+  end
+  for eff in all(effects) do
+   eff:update()
   end
   curs:update()
 end
@@ -40,6 +47,10 @@ function _draw()
   end
   for enem in all(enemies) do
    enem:draw()
+  end
+  for eff in all(effects) do
+   printh(rnd())
+   eff:draw()
   end
   curs:draw()
   print("xp: "..game.xp,96,0)
@@ -58,14 +69,65 @@ function tower:new(args)
  o.y = args.y or 0
  o.p_one = nildef(args.p_one, 8)
  o.p_two = nildef(args.p_two, 12)
+ o.target = nil
+ o.cooldown = 0
+ o.range = nildef(args.range, 24)
  return o
+end
+
+function tower:update()
+	self.cooldown = max(0,self.cooldown-1)
+ self:updatetarget()
+ self:fire()
+end
+
+function tower:fire()
+ if (self.target == nil) return
+ if (self.cooldown > 0) return
+ self.target:hit(150)
+ self.cooldown = 10
+ z = zap:new({x1=self.x,y1=self.y,x2=self.target.x,y2=self.target.y})
+ add(effects, z)
+ printh(z)
 end
 
 function tower:draw()
 	pal(8,self.p_one)
  pal(12,self.p_two)
- spr(4,self.x*8,self.y*8)
+ spr(4,self.x-3,self.y-3)
 	pal()
+end
+
+function tower:updatetarget()
+ if not self:inrange(self.target) then
+  self.target = nil
+ end
+ if self.target ~= nil then
+  return
+ end
+	for e in all(enemies) do
+	 if self:inrange(e) then
+	  self.target = e
+	  break
+	 end
+	end
+end
+
+function tower:inrange(other)
+ if other == nil then
+  return false
+ end
+ if not other.alive then
+  return false
+ end
+ if abs(self.x-other.x) > self.range then
+  return false
+ end
+ if abs(self.y-other.y) > self.range then
+  return false
+ end
+ -- todo: add real range calc
+ return true
 end
 -->8
 -- enemy
@@ -84,11 +146,12 @@ enemy.__index = enemy
 function enemy:new(args)
  args = args or {}
  o = setmetatable({}, self)
- o.speed=nildef(args.speed,0.3)
+ o.speed=nildef(args.speed,1)
  o.step = 0
- o.x,o.y = getxy(o.step)
+ o.x,o.y = getxy(0)
  o.hp = nildef(args.hp,200+flr(rnd(400)))
  o.maxhp = o.hp
+ o.alive = true
  return o
 end
 
@@ -118,10 +181,12 @@ end
 function enemy:draw()
  drawhp(self.x-3,self.y-3,8,self.hp,self.maxhp)
  spr(6,self.x-3,self.y-3)
+ print(self.hp,96,32)
 end
 
 function enemy:hit(dmg)
  self.hp = max(0, self.hp-dmg)
+ self.alive = self.hp > 0
 end
 
 -- draw an hp bar
@@ -223,6 +288,32 @@ end
 function curs:draw()
  s=7+(self.anim/2)
  spr(s,self.x*8,self.y*8)
+end
+-->8
+-- effects
+zap = {}
+zap.__index = zap
+
+function zap:new(args)
+ args = args or {}
+ o = setmetatable({}, self)
+ o.x1=nildef(args.x1,0)
+ o.y1=nildef(args.y1,0)
+ o.x2=nildef(args.x2,0)
+ o.y2=nildef(args.y2,0)
+ o.life=nildef(args.life,5)
+ return o
+end
+
+function zap:update()
+	self.life = max(0,self.life-1)
+ if self.life == 0 then
+  del(effects,self)
+ end
+end
+
+function zap:draw()
+ line(self.x1, self.y1, self.x2, self.y2, 10)
 end
 __gfx__
 0000000000000000000000000000000000855c00080c009000000000880000888880000808880000008880000008880000008880800008880000000000000000
