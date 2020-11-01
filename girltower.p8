@@ -5,6 +5,7 @@ __lua__
 -- by natalie fearnley
 
 function _init()
+ debug=true
  towers={tower:new({x=35,y=35})}
  enemies={}
  effects={}
@@ -55,8 +56,29 @@ function _draw()
   curs:draw()
   print("xp: "..game.xp,96,0)
   print("hp: "..game.hp,96,6)
+  if (debug) showdebug()
 end
 
+function showdebug()
+ for x=0,10 do
+  for y=0,16 do
+   if iswall(x,y) then
+    pset(112+x,112+y,13)
+   else
+    pset(112+x,112+y,11)
+   end
+  end
+ end
+ oldx=nil
+ oldy=nil
+ for p in all(path) do
+  if oldx~=nil then
+   line(oldx,oldy,p[1],p[2],14)
+  end
+  oldx=p[1]
+  oldy=p[2]
+ end	
+end
 -->8
 -- tower
 tower = {}
