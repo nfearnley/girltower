@@ -129,6 +129,10 @@ function tower:inrange(other)
  -- todo: add real range calc
  return true
 end
+
+function iswall(x,y)
+ return fget(mget(x,y)) & 1 == 1
+end
 -->8
 -- enemy
 function getxy(step)
