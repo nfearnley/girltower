@@ -1,0 +1,18 @@
+TODO
+----
+Buy towers
+Upgrade towers
+Title Screen
+Death
+Spawn Timer
+Spawns
+Status bar
+Multiple effects
+Money
+Life
+Pause
+Music Mute
+Sound effects
+Zap effects
+Animated knights
+Multiple enemy types

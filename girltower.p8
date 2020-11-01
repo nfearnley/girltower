@@ -6,7 +6,7 @@ __lua__
 
 function _init()
  debug=true
- towers={tower:new({x=35,y=35})}
+ towers=table2d:new(11,16)
  enemies={}
  effects={}
  music(0)
@@ -24,11 +24,13 @@ function _update()
    	curs.y+=1
   end
   if btnp(❎) then
-  	--add(towers, tower:new(t))
-  	add(enemies, enemy:new())
+   placetower(curs.x,curs.y)
   end
-  for tow in all(towers) do
-   tow:update()
+  if btnp(🅾️) then
+   add(enemies, enemy:new())
+  end
+  for t in towers:all() do
+  	t:update()
   end
   for enem in all(enemies) do
    enem:update()
@@ -45,8 +47,8 @@ function _draw()
   map(0,0,0,0,16,16)
   wallmap=ceil(32+max(0,game.hp)*4/100)
   map(0,wallmap,0,0,16,1)
-  for tow in all(towers) do
-   tow:draw()
+  for t in towers:all() do
+  	t:draw()
   end
   for enem in all(enemies) do
    enem:draw()
@@ -57,11 +59,11 @@ function _draw()
   curs:draw()
   print("xp: "..game.xp,96,0)
   print("hp: "..game.hp,96,6)
-  print(wallmap,96,12)
   if (debug) showdebug()
 end
 
 function showdebug()
+ print(wallmap,96,12)
  for x=0,10 do
   for y=0,16 do
    if iswall(x,y) then
@@ -86,11 +88,26 @@ end
 tower = {}
 tower.__index = tower
 
+function placetower(x,y)
+ if not iswall(x,y) then
+  return
+ end
+ if towers:exists(curs.x,curs.y) then
+  return
+ end
+ t=tower:new({x=curs.x,y=curs.y})
+	towers:set(curs.x,curs.y,t)
+end
+
 function tower:new(args)
  args = args or {}
  o = setmetatable({}, self)
- o.x = args.x or 0
- o.y = args.y or 0
+ o.gridx = args.x or 0
+ o.gridy = args.y or 0
+ o.x = o.gridx*8
+ o.y = o.gridy*8
+ o.firex = o.x+3
+ o.firey = o.y+3
  o.p_one = nildef(args.p_one, 8)
  o.p_two = nildef(args.p_two, 12)
  o.target = nil
@@ -110,15 +127,19 @@ function tower:fire()
  if (self.cooldown > 0) return
  self.target:hit(150)
  self.cooldown = 10
- z = zap:new({x1=self.x,y1=self.y,x2=self.target.x,y2=self.target.y})
+ z = zap:new({
+   x1=self.firex,
+   y1=self.firey,
+   x2=self.target.x,
+   y2=self.target.y
+ })
  add(effects, z)
- printh(z)
 end
 
 function tower:draw()
 	pal(8,self.p_one)
  pal(12,self.p_two)
- spr(4,self.x-3,self.y-3)
+ spr(4,self.x,self.y)
 	pal()
 end
 
@@ -144,10 +165,10 @@ function tower:inrange(other)
  if not other.alive then
   return false
  end
- if abs(self.x-other.x) > self.range then
+ if abs(self.firex-other.x) > self.range then
   return false
  end
- if abs(self.y-other.y) > self.range then
+ if abs(self.firey-other.y) > self.range then
   return false
  end
  -- todo: add real range calc
@@ -209,7 +230,6 @@ end
 function enemy:draw()
  drawhp(self.x-3,self.y-3,8,self.hp,self.maxhp)
  spr(6,self.x-3,self.y-3)
- print(self.hp,96,32)
 end
 
 function enemy:hit(dmg)
@@ -296,6 +316,16 @@ end
 function clamp(low,val,hi)
  return max(low,min(val,hi))
 end
+
+debug_printh = printh
+debug_cycle={".","_"}
+debug_c=0
+function printh(s)
+ debug_c=(debug_c+1)%#debug_cycle
+ c=debug_cycle[debug_c+1]
+ debug_printh(c.." "..s)
+end
+
 -->8
 -- game
 game = {
@@ -343,6 +373,61 @@ end
 
 function zap:draw()
  line(self.x1, self.y1, self.x2, self.y2, 10)
+end
+-->8
+--table2d
+table2d={}
+table2d.__index = table2d
+
+function table2d:new(w,h)
+ o = setmetatable({}, self)
+ o.w=w
+ o.h=h
+ o.values={}
+ return o
+end
+
+function table2d:exists(x,y)
+ return self:get(x,y) ~= nil
+end
+
+function table2d:get(x,y)
+ assert(x<self.w)
+ assert(y<self.h)
+ return self.values[1+x+y*self.w]
+end
+
+function table2d:set(x,y,i)
+ assert(x<self.w)
+ assert(y<self.h)
+ self.values[1+x+y*self.w] = i
+end
+
+function table2d:all()
+ x=-1
+ y=0
+ function getnext()
+   x+=1
+   if x >= self.w then
+	   x=0
+	   y+=1
+	  end
+	  if y >= self.h then
+	   return false
+	  end
+	  return true
+ end
+ function f()
+  n=nil
+  while n==nil do
+   if not getnext() then
+    return nil
+   end
+   n = self:get(x,y)
+  end
+  return n
+ end
+ return f
 end
 __gfx__
 0000000000000000000000000000000000855c00080c009000000000880000888880000808880000008880000008880000008880800008880000000000000000
