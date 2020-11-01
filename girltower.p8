@@ -43,6 +43,8 @@ function _draw()
   cls()
   map(0,16,0,0,16,16)
   map(0,0,0,0,16,16)
+  wallmap=35-game.hp*3/100
+  map(0,wallmap,0,0,16,1)
   for tow in all(towers) do
    tow:draw()
   end
