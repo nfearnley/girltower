@@ -3,9 +3,9 @@ version 29
 __lua__
 -- girl tower
 -- by natalie fearnley
+_env = _ENV
 
 function _init()
- debug=true
  towers=table2d:new(11,16)
  enemies={}
  effects={}
@@ -13,6 +13,7 @@ function _init()
 end
 
 function _update()
+ local updateables
  if btnp(⬅️) and curs.x > 0 then
   curs.x-=1
  elseif btnp(➡️) and curs.x < 15 then
@@ -20,8 +21,10 @@ function _update()
  end
  if btnp(⬆️) and curs.y > 0 then
   curs.y-=1
+  --game.hp+=1
  elseif btnp(⬇️) and curs.y < 15 then
- 	curs.y+=1
+  curs.y+=1
+  --game.hp-=1
  end
  if btnp(❎) then
   placetower(curs.x,curs.y)
@@ -30,7 +33,7 @@ function _update()
   add(enemies, enemy:new())
  end
  updateables = {
-  towers:all(),
+  all(towers),
   all(enemies),
   all(effects),
   all(crystals)
@@ -44,13 +47,13 @@ function _update()
 end
 
 function _draw()
+ local drawables
  cls()
  map(0,16,0,0,16,16)
  map(0,0,0,0,16,16)
- wallmap=ceil(32+max(0,game.hp)*4/100)
- map(0,wallmap,0,0,16,1)
+ wall:draw()
  drawables = {
-  towers:all(),
+  all(towers),
   all(enemies),
   all(effects),
   all(crystals)
@@ -61,31 +64,9 @@ function _draw()
   end
  end
  curs:draw()
- print("xp: "..game.xp,96,0)
- print("hp: "..game.hp,96,6)
- if (debug) showdebug()
-end
-
-function showdebug()
- print(wallmap,96,12)
- for x=0,10 do
-  for y=0,16 do
-   if iswall(x,y) then
-    pset(112+x,112+y,13)
-   else
-    pset(112+x,112+y,11)
-   end
-  end
- end
- oldx=nil
- oldy=nil
- for p in all(path) do
-  if oldx~=nil then
-   line(oldx,oldy,p[1],p[2],14)
-  end
-  oldx=p[1]
-  oldy=p[2]
- end	
+ print("xp: "..game.xp,96,7,10)
+ print("hp: "..game.hp,96,13,10)
+ debug:draw()
 end
 -->8
 -- tower
@@ -93,12 +74,15 @@ tower = {}
 tower.__index = tower
 
 function placetower(x,y)
+	printh("hello")
  if not iswall(x,y) then
   return
  end
+	printh("hey")
  if towers:exists(curs.x,curs.y) then
   return
  end
+	printh("hi")
  t=tower:new({x=curs.x,y=curs.y})
 	towers:set(curs.x,curs.y,t)
 end
@@ -199,7 +183,7 @@ enemy.__index = enemy
 function enemy:new(args)
  args = args or {}
  o = setmetatable({}, self)
- o.speed=nildef(args.speed,3)
+ o.speed=nildef(args.speed,1)
  o.step = 0
  o.x,o.y = getxy(0)
  o.hp = nildef(args.hp,600+flr(rnd(400)))
@@ -286,7 +270,7 @@ path = {
  {27,  35, 0, 1},
  {27,  43, 0, 1},
  {27,  51, 0, 1},
- {27,  59, 1, 0},
+ {27,  59, 0, 1},
  {27,  67, 1, 0},
  {35,  67, 1, 0},
  {43,  67, 1, 0},
@@ -327,13 +311,14 @@ debug_c=0
 function printh(s)
  debug_c=(debug_c+1)%#debug_cycle
  c=debug_cycle[debug_c+1]
- debug_printh(c.." "..s)
+ debug_printh(c.." "..tostr(s))
 end
 
 -->8
 -- game
 game = {
- hp=100,
+ hp=48,
+ maxhp=48,
  xp=0
 }
 
@@ -382,12 +367,23 @@ end
 -->8
 -- table2d
 table2d={}
-table2d.__index = table2d
+
+function table2d.__index(t,k)
+ if table2d(k)~=nil then
+  return table2d(k)~=nil
+ end
+ -- todo: add indexing
+end
+
+function table2d.__len(t)
+ return t.len
+end
 
 function table2d:new(w,h)
  o = setmetatable({}, self)
  o.w=w
  o.h=h
+ o.len=0
  o.values={}
  return o
 end
@@ -405,6 +401,12 @@ end
 function table2d:set(x,y,i)
  assert(x<self.w)
  assert(y<self.h)
+ old=self:get(x,y)
+ if old==nil and i~=nil then
+  self.len+=1
+ elseif old~=nil and i==nil then
+  self.len-=1
+ end
  self.values[1+x+y*self.w] = i
 end
 
@@ -436,42 +438,105 @@ function table2d:all()
 end
 -->8
 -- crystal
-crystal={}
+crystal={
+ maxh=6,
+ drift=3,
+ speed=0.05
+}
 crystal.__index = crystal
 
 function crystal:new(x,y,i)
+ local o, direction
  o=setmetatable({}, self)
  o.x=x
  o.y=y
  o.i=i
- o.f=rnd()*2
- o.d=0.05
+ o.f=rnd()*self.drift
+ direction=(flr(rnd()*2)*2-1)
+ o.d=direction*self.speed
  return o
 end
 
 function crystal:update()
- if (self.f>=2) self.d*=-1
- if (self.f<=0) self.d*=-1
- self.f=clamp(0,self.f+self.d,3)
+ local maxf
+ maxf=self.drift-0x0000.0001
+ if self.f >= maxf then
+  self.d=-abs(self.speed)
+ end
+ if self.f <= 0 then
+  self.d=abs(self.speed)
+ end
+ self.f=clamp(0,self.f+self.d,maxf)
 end
 
 function crystal:draw()
- h=clamp(0,game.hp-self.i*7,6)
+ local f, h, s
+ h=clamp(0,game.hp-self.i*self.maxh,self.maxh)
  s=112+h
- spr(s,self.x,self.y+flr(self.f-0.5))
- printh(self.i)
+ if h==0 then
+ 	f=0
+ else
+  f=self.f
+ end
+ spr(s,self.x,self.y-flr(f))
 end
 
 crystals={
- crystal:new( 8,14,0),
- crystal:new(14,14,1),
- crystal:new(21,14,2),
- crystal:new(27,14,3),
- crystal:new(56,14,4),
- crystal:new(62,14,5),
- crystal:new(69,14,6),
- crystal:new(75,14,7)
+ crystal:new( 8,16,0),
+ crystal:new(14,16,1),
+ crystal:new(21,16,2),
+ crystal:new(27,16,3),
+ crystal:new(56,16,4),
+ crystal:new(62,16,5),
+ crystal:new(69,16,6),
+ crystal:new(75,16,7)
 }
+-->8
+-- debug
+debug={
+ enabled=false
+}
+
+function debug:draw()
+ if not debug.enabled then
+  return
+ end 
+ local oldx,oldy,olddx,olddy,newx,newy,_
+ for x=0,10 do
+  for y=0,16 do
+   if iswall(x,y) then
+    pset(112+x,112+y,13)
+   else
+    pset(112+x,112+y,11)
+   end
+  end
+ end
+ for i = 1,#path-1 do
+  oldx,oldy,olddx,olddy=unpack(path[i])
+  newx,newy,_,_=unpack(path[i+1])
+  line(oldx,oldy,newx,newy,14)
+
+  if olddx==-1 then
+   spr(67,oldx-3,oldy-3,1,1,false,false)
+  elseif olddx==1 then
+   spr(67,oldx-3,oldy-3,1,1,true,false)
+  elseif olddy==-1 then
+   spr(68,oldx-3,oldy-3,1,1,false,false)
+  elseif olddy==1 then
+   spr(68,oldx-3,oldy-3,1,1,false,true)
+  end
+ end	
+end
+
+-->8
+-- wall
+wall={}
+
+function wall:draw()
+ local wallmap
+ wallmap=ceil(31+max(0,game.hp)*4/game.maxhp)
+ map(0,wallmap,0,0,16,1)
+end
 __gfx__
 0000000000000000000000000000000000855c00080c009000000000880000888880000808880000008880000008880000008880800008880000000000000000
 00000000000555555555555555555000058ddc5080c0c90000000000800000080000000800000008000000000000000080000000800000000000000000000000
@@ -505,12 +570,12 @@ __gfx__
 00000000005dddddddddddddddddd5000055550000000000333366660000000066663333555555555555555550555555505550000aaaa44444444444444aaaa0
 000000000055555555555555555555000000000000000000333333330000000033333333d5ddd5ddd5ddd5ddd5ddd5ddd5dd00dd00aaaa444444444444aaaa00
 00000000000000000000000000000000000000000000000033333333000000003333333355555555555555555555555055505550000000000000000000000000
-99999999999999999999999900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-96699999999999999999966900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-96777777777777777777776900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-99777777777777777777779900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-99777777777777777777779900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-99777777777777777777779900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+99999999999999999999999900000000000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+96699999999999999999966900b0000000bbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+9677777777777777777777690b0000000b0b0b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+997777777777777777777799bbbbb000000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+9977777777777777777777990b000000000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+99777777777777777777779900b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 99777777777777777777779900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 99777777777777777777779900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 99777777777777777777779900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
